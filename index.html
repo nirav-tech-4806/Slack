@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slack — Game Profile</title>
+  <meta name="description" content="Official game profile for Slack — the ultimate multiplayer experience. View stats, achievements, and more." />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:   #7c3aed;
+      --accent2:  #06b6d4;
+      --gold:     #f59e0b;
+      --bg:       #0a0a0f;
+      --surface:  #13131c;
+      --card:     #1a1a27;
+      --border:   rgba(124,58,237,.25);
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* BG ORBS */
+    .bg-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .18; animation: drift 18s ease-in-out infinite alternate; }
+    .orb-1 { width: 600px; height: 600px; background: var(--accent);  top: -200px; left: -150px; animation-delay: 0s; }
+    .orb-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -150px; right: -100px; animation-delay: -6s; }
+    .orb-3 { width: 350px; height: 350px; background: var(--gold);    top: 40%; left: 50%; animation-delay: -12s; }
+    @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(40px,-40px) scale(1.08); } }
+
+    /* LAYOUT */
+    .wrapper { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 40px 20px 80px; }
+
+    /* HERO */
+    .hero { position: relative; border-radius: 24px; overflow: hidden; margin-bottom: 32px; border: 1px solid var(--border); }
+    .hero-banner-canvas { width: 100%; height: 260px; display: block; }
+
+    .hero-profile-row {
+      display: flex; align-items: flex-end; gap: 24px;
+      padding: 0 32px 28px;
+      background: linear-gradient(to top, var(--surface) 60%, transparent);
+      margin-top: -80px; position: relative;
+    }
+    .avatar-wrap { flex-shrink: 0; position: relative; width: 110px; height: 110px; }
+    .avatar-ring {
+      position: absolute; inset: -4px; border-radius: 50%;
+      background: conic-gradient(var(--accent), var(--accent2), var(--gold), var(--accent));
+      animation: spin 4s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .avatar {
+      position: relative; width: 110px; height: 110px; border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 46px; font-weight: 900; color: #fff;
+      border: 4px solid var(--surface); z-index: 1;
+      text-shadow: 0 2px 12px rgba(0,0,0,.5);
+    }
+    .online-dot {
+      position: absolute; bottom: 6px; right: 6px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #22c55e; border: 3px solid var(--surface); z-index: 2;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); }
+      50%      { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    }
+
+    .profile-info { flex: 1; padding-bottom: 4px; }
+    .profile-name {
+      font-size: 32px; font-weight: 800;
+      background: linear-gradient(90deg, #fff 0%, var(--accent2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.1;
+    }
+    .profile-handle { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .profile-badges { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: .5px; text-transform: uppercase; }
+    .badge-pro { background: rgba(124,58,237,.25); color: #a78bfa; border: 1px solid rgba(124,58,237,.4); }
+    .badge-top { background: rgba(245,158,11,.2);  color: #fbbf24; border: 1px solid rgba(245,158,11,.4); }
+    .badge-ver { background: rgba(6,182,212,.2);   color: #67e8f9; border: 1px solid rgba(6,182,212,.4); }
+    .online-status { display: flex; align-items: center; gap: 6px; color: #22c55e; font-size: 13px; font-weight: 500; margin-top: 8px; }
+    .online-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; }
+
+    /* STATS */
+    .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 20px 18px; text-align: center;
+      transition: transform .25s, border-color .25s, box-shadow .25s;
+      cursor: default; position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(124,58,237,.08), transparent);
+      opacity: 0; transition: opacity .25s;
+    }
+    .stat-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 8px 32px rgba(124,58,237,.2); }
+    .stat-card:hover::before { opacity: 1; }
+    .stat-icon  { font-size: 26px; margin-bottom: 8px; display: block; }
+    .stat-val   { font-size: 26px; font-weight: 800; color: #fff; line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .8px; }
+
+    /* GRID */
+    .main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
+
+    /* SECTION TITLE */
+    .section-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--muted);
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* CARD */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 24px; margin-bottom: 20px; }
+    .bio-text { color: #94a3b8; font-size: 15px; line-height: 1.7; }
+    .bio-text strong { color: var(--text); }
+
+    /* ACTIVITY */
+    .activity-label { font-size: 13px; color: var(--muted); margin-bottom: 10px; font-weight: 500; }
+    .activity-grid { display: grid; grid-template-columns: repeat(26, 1fr); gap: 3px; }
+    .act-cell { aspect-ratio: 1; border-radius: 3px; background: rgba(124,58,237,.08); transition: background .2s, transform .2s; }
+    .act-cell:hover { transform: scale(1.3); }
+    .act-0 { background: rgba(124,58,237,.06); }
+    .act-1 { background: rgba(124,58,237,.25); }
+    .act-2 { background: rgba(124,58,237,.5); }
+    .act-3 { background: rgba(124,58,237,.75); }
+    .act-4 { background: rgba(124,58,237,1); }
+
+    /* ACHIEVEMENTS */
+    .achievements-list { display: flex; flex-direction: column; gap: 12px; }
+    .ach-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; background: var(--surface);
+      border-radius: 12px; border: 1px solid transparent;
+      transition: border-color .2s, transform .2s;
+    }
+    .ach-item:hover { border-color: var(--border); transform: translateX(4px); }
+    .ach-icon { font-size: 28px; flex-shrink: 0; }
+    .ach-info { flex: 1; }
+    .ach-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .ach-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .ach-pts  { font-size: 13px; font-weight: 700; color: var(--gold); }
+
+    /* PROGRESS */
+    .prog-list { display: flex; flex-direction: column; gap: 14px; }
+    .prog-head { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+    .prog-name { font-weight: 500; }
+    .prog-pct  { color: var(--accent2); font-weight: 700; }
+    .prog-bar  { height: 6px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+    .prog-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      animation: fill-anim .9s ease forwards;
+    }
+    @keyframes fill-anim { from { width: 0; } }
+
+    /* RANK */
+    .rank-card {
+      background: linear-gradient(135deg, rgba(124,58,237,.15) 0%, rgba(6,182,212,.1) 100%);
+      border: 1px solid rgba(124,58,237,.4); border-radius: 18px; padding: 24px; margin-bottom: 20px; text-align: center;
+    }
+    .rank-emblem { font-size: 72px; line-height: 1; margin-bottom: 8px; filter: drop-shadow(0 0 20px #7c3aed); }
+    .rank-title  { font-size: 22px; font-weight: 800; color: #a78bfa; }
+    .rank-sub    { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .rank-xp-bar { margin-top: 16px; }
+    .rank-xp-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+    .rank-xp-track { height: 8px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+    .rank-xp-fill {
+      height: 100%; width: 68%;
+      background: linear-gradient(90deg, #7c3aed, #a78bfa);
+      border-radius: 99px; position: relative;
+      animation: fill-anim .9s .3s ease both;
+    }
+    .rank-xp-fill::after {
+      content: ''; position: absolute; right: 0; top: -2px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #c4b5fd; box-shadow: 0 0 8px #7c3aed;
+    }
+
+    /* MATCHES */
+    .match-list { display: flex; flex-direction: column; gap: 10px; }
+    .match-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; background: var(--surface);
+      border-radius: 12px; border-left: 3px solid transparent; transition: background .2s;
+    }
+    .match-item.win  { border-left-color: #22c55e; }
+    .match-item.loss { border-left-color: #ef4444; }
+    .match-item.draw { border-left-color: #f59e0b; }
+    .match-item:hover { background: rgba(255,255,255,.04); }
+    .match-result { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; width: 32px; }
+    .match-item.win  .match-result { color: #22c55e; }
+    .match-item.loss .match-result { color: #ef4444; }
+    .match-item.draw .match-result { color: #f59e0b; }
+    .match-map { flex: 1; }
+    .match-map-name { font-size: 13px; font-weight: 600; }
+    .match-map-mode { font-size: 11px; color: var(--muted); }
+    .match-kda { text-align: right; font-size: 12px; color: var(--muted); }
+    .match-kda span { display: block; font-size: 13px; font-weight: 700; color: var(--text); }
+    .match-time { font-size: 11px; color: var(--muted); text-align: right; width: 60px; }
+
+    /* FRIENDS */
+    .friends-list { display: flex; flex-direction: column; gap: 10px; }
+    .friend-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; background: var(--surface); border-radius: 10px; transition: background .2s;
+    }
+    .friend-item:hover { background: rgba(255,255,255,.04); }
+    .friend-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; flex-shrink: 0;
+    }
+    .friend-name { font-size: 13px; font-weight: 600; flex: 1; }
+    .friend-status { font-size: 11px; }
+    .friend-online  { color: #22c55e; }
+    .friend-ingame  { color: #06b6d4; }
+    .friend-offline { color: var(--muted); }
+
+    /* FOOTER */
+    footer { text-align: center; margin-top: 48px; color: var(--muted); font-size: 12px; letter-spacing: .5px; }
+    footer strong { color: var(--accent2); }
+
+    /* RESPONSIVE */
+    @media (max-width: 720px) {
+      .stat-row  { grid-template-columns: repeat(2, 1fr); }
+      .main-grid { grid-template-columns: 1fr; }
+      .hero-profile-row { padding: 0 16px 22px; }
+      .profile-name { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="wrapper">
+
+  <!-- HERO -->
+  <div class="hero">
+    <canvas class="hero-banner-canvas" id="bannerCanvas"></canvas>
+    <div class="hero-profile-row">
+      <div class="avatar-wrap">
+        <div class="avatar-ring"></div>
+        <div class="avatar">S</div>
+        <div class="online-dot"></div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">Slack</div>
+        <div class="profile-handle">@slack_gg &middot; Member since Oct 2021</div>
+        <div class="profile-badges">
+          <span class="badge badge-pro">Pro Player</span>
+          <span class="badge badge-top">Top 1%</span>
+          <span class="badge badge-ver">Verified</span>
+        </div>
+        <div class="online-status">Online &mdash; In Competitive Match</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stat-row">
+    <div class="stat-card">
+      <span class="stat-icon">&#x2694;&#xFE0F;</span>
+      <div class="stat-val">4,821</div>
+      <div class="stat-label">Total Kills</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon">&#x1F3C6;</span>
+      <div class="stat-val">312</div>
+      <div class="stat-label">Wins</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon">&#x1F3AF;</span>
+      <div class="stat-val">3.24</div>
+      <div class="stat-label">K/D Ratio</div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon">&#x23F1;&#xFE0F;</span>
+      <div class="stat-val">1,240h</div>
+      <div class="stat-label">Play Time</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT -->
+    <div>
+
+      <div class="card">
+        <div class="section-title">About</div>
+        <p class="bio-text">
+          Hey, I'm <strong>Slack</strong> &mdash; a competitive FPS player grinding the ranked ladder since 2021.
+          I specialize in <strong>entry fragging</strong> and <strong>aggressive playstyles</strong>.
+          Currently pushing for <strong>Grandmaster</strong>. Always down to squad up &#x1F3AE;
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Skill Breakdown</div>
+        <div class="prog-list">
+          <div class="prog-item">
+            <div class="prog-head"><span class="prog-name">Aim Accuracy</span><span class="prog-pct">82%</span></div>
+            <div class="prog-bar"><div class="prog-fill" style="width:82%"></div></div>
+          </div>
+          <div class="prog-item">
+            <div class="prog-head"><span class="prog-name">Game Sense</span><span class="prog-pct">75%</span></div>
+            <div class="prog-bar"><div class="prog-fill" style="width:75%"></div></div>
+          </div>
+          <div class="prog-item">
+            <div class="prog-head"><span class="prog-name">Team Communication</span><span class="prog-pct">90%</span></div>
+            <div class="prog-bar"><div class="prog-fill" style="width:90%"></div></div>
+          </div>
+          <div class="prog-item">
+            <div class="prog-head"><span class="prog-name">Movement</span><span class="prog-pct">68%</span></div>
+            <div class="prog-bar"><div class="prog-fill" style="width:68%"></div></div>
+          </div>
+          <div class="prog-item">
+            <div class="prog-head"><span class="prog-name">Clutch Factor</span><span class="prog-pct">78%</span></div>
+            <div class="prog-bar"><div class="prog-fill" style="width:78%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Activity &mdash; Last 6 Months</div>
+        <div class="activity-label">1,240 hours played</div>
+        <div class="activity-grid" id="activityGrid"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Recent Matches</div>
+        <div class="match-list">
+          <div class="match-item win">
+            <div class="match-result">WIN</div>
+            <div class="match-map"><div class="match-map-name">Dust II</div><div class="match-map-mode">Competitive &middot; 5v5</div></div>
+            <div class="match-kda"><span>22 / 8 / 5</span>K/D/A</div>
+            <div class="match-time">2h ago</div>
+          </div>
+          <div class="match-item win">
+            <div class="match-result">WIN</div>
+            <div class="match-map"><div class="match-map-name">Mirage</div><div class="match-map-mode">Competitive &middot; 5v5</div></div>
+            <div class="match-kda"><span>18 / 11 / 3</span>K/D/A</div>
+            <div class="match-time">5h ago</div>
+          </div>
+          <div class="match-item loss">
+            <div class="match-result">LOSS</div>
+            <div class="match-map"><div class="match-map-name">Nuke</div><div class="match-map-mode">Competitive &middot; 5v5</div></div>
+            <div class="match-kda"><span>14 / 17 / 2</span>K/D/A</div>
+            <div class="match-time">8h ago</div>
+          </div>
+          <div class="match-item win">
+            <div class="match-result">WIN</div>
+            <div class="match-map"><div class="match-map-name">Inferno</div><div class="match-map-mode">Ranked &middot; 5v5</div></div>
+            <div class="match-kda"><span>27 / 9 / 7</span>K/D/A</div>
+            <div class="match-time">1d ago</div>
+          </div>
+          <div class="match-item draw">
+            <div class="match-result">DRAW</div>
+            <div class="match-map"><div class="match-map-name">Overpass</div><div class="match-map-mode">Casual &middot; 10v10</div></div>
+            <div class="match-kda"><span>21 / 21 / 4</span>K/D/A</div>
+            <div class="match-time">1d ago</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+
+      <div class="rank-card">
+        <div class="rank-emblem">&#x1F48E;</div>
+        <div class="rank-title">Diamond II</div>
+        <div class="rank-sub">Top 2.4% of all players worldwide</div>
+        <div class="rank-xp-bar">
+          <div class="rank-xp-labels"><span>12,400 XP</span><span>18,000 XP &rarr;</span></div>
+          <div class="rank-xp-track"><div class="rank-xp-fill"></div></div>
+          <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px;">5,600 XP to Diamond III</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Achievements</div>
+        <div class="achievements-list">
+          <div class="ach-item">
+            <div class="ach-icon">&#x1F3AF;</div>
+            <div class="ach-info"><div class="ach-name">Sharpshooter</div><div class="ach-desc">Achieve 90%+ headshot rate</div></div>
+            <div class="ach-pts">+500</div>
+          </div>
+          <div class="ach-item">
+            <div class="ach-icon">&#x1F525;</div>
+            <div class="ach-info"><div class="ach-name">On Fire</div><div class="ach-desc">10-game win streak</div></div>
+            <div class="ach-pts">+250</div>
+          </div>
+          <div class="ach-item">
+            <div class="ach-icon">&#x1F6E1;&#xFE0F;</div>
+            <div class="ach-info"><div class="ach-name">Iron Wall</div><div class="ach-desc">0 deaths in a match</div></div>
+            <div class="ach-pts">+400</div>
+          </div>
+          <div class="ach-item">
+            <div class="ach-icon">&#x1F680;</div>
+            <div class="ach-info"><div class="ach-name">Rocket Start</div><div class="ach-desc">Reach Diamond in 30 days</div></div>
+            <div class="ach-pts">+1000</div>
+          </div>
+          <div class="ach-item">
+            <div class="ach-icon">&#x1F451;</div>
+            <div class="ach-info"><div class="ach-name">Clutch King</div><div class="ach-desc">Win 50 clutch rounds</div></div>
+            <div class="ach-pts">+750</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Friends Online</div>
+        <div class="friends-list">
+          <div class="friend-item">
+            <div class="friend-avatar" style="background:linear-gradient(135deg,#ef4444,#f97316)">V</div>
+            <div class="friend-name">Viper_X</div>
+            <div class="friend-status friend-ingame">&#x1F3AE; In Game</div>
+          </div>
+          <div class="friend-item">
+            <div class="friend-avatar" style="background:linear-gradient(135deg,#22c55e,#06b6d4)">N</div>
+            <div class="friend-name">NightOwl99</div>
+            <div class="friend-status friend-online">&#x25CF; Online</div>
+          </div>
+          <div class="friend-item">
+            <div class="friend-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">Z</div>
+            <div class="friend-name">Zara_Pro</div>
+            <div class="friend-status friend-ingame">&#x1F3AE; In Game</div>
+          </div>
+          <div class="friend-item">
+            <div class="friend-avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">K</div>
+            <div class="friend-name">KryptoFrag</div>
+            <div class="friend-status friend-offline">&#x25CB; Offline</div>
+          </div>
+          <div class="friend-item">
+            <div class="friend-avatar" style="background:linear-gradient(135deg,#06b6d4,#3b82f6)">M</div>
+            <div class="friend-name">M0narch</div>
+            <div class="friend-status friend-online">&#x25CF; Online</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2026 <strong>Slack.gg</strong> &middot; All rights reserved &middot; Made with &#x2764;&#xFE0F; by the Slack team
+  </footer>
+</div>
+
+<script>
+  // BANNER CANVAS
+  (function () {
+    const canvas = document.getElementById('bannerCanvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, particles = [], frame = 0;
+
+    function resize() {
+      W = canvas.width  = canvas.offsetWidth;
+      H = canvas.height = canvas.offsetHeight;
+    }
+
+    function createParticles() {
+      particles = [];
+      const count = Math.floor(W / 14);
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * W, y: Math.random() * H,
+          r: Math.random() * 2 + .5,
+          vx: (Math.random() - .5) * .4,
+          vy: (Math.random() - .5) * .4,
+          alpha: Math.random() * .6 + .2,
+        });
+      }
+    }
+
+    function draw() {
+      const grd = ctx.createLinearGradient(0, 0, W, H);
+      grd.addColorStop(0,  '#1e1b4b');
+      grd.addColorStop(.5, '#0c4a6e');
+      grd.addColorStop(1,  '#312e81');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, W, H);
+
+      // Grid
+      ctx.strokeStyle = 'rgba(124,58,237,.12)'; ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+      for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+      // Particles
+      particles.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(167,139,250,' + p.alpha + ')'; ctx.fill();
+      });
+
+      // Text watermark
+      ctx.save();
+      ctx.font = '900 ' + Math.min(W * .18, 120) + 'px Outfit, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(255,255,255,.04)';
+      ctx.fillText('SLACK', W/2, H/2);
+      ctx.restore();
+
+      // Moving glow
+      const t = frame * .008;
+      const ox = W*.5 + Math.sin(t)*80, oy = H*.5 + Math.cos(t*.7)*30;
+      const orb = ctx.createRadialGradient(ox, oy, 0, ox, oy, 200);
+      orb.addColorStop(0,  'rgba(124,58,237,.35)');
+      orb.addColorStop(.5, 'rgba(6,182,212,.15)');
+      orb.addColorStop(1,  'transparent');
+      ctx.fillStyle = orb; ctx.fillRect(0, 0, W, H);
+    }
+
+    function tick() {
+      frame++;
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      });
+      draw(); requestAnimationFrame(tick);
+    }
+
+    resize(); createParticles(); tick();
+    window.addEventListener('resize', () => { resize(); createParticles(); });
+  })();
+
+  // ACTIVITY GRID
+  (function () {
+    const grid = document.getElementById('activityGrid');
+    const weights = [20,15,25,25,15];
+    function pick() {
+      let r = Math.random()*100, c = 0;
+      for (let i = 0; i < 5; i++) { c += weights[i]; if (r < c) return i; } return 1;
+    }
+    for (let i = 0; i < 26*6; i++) {
+      const d = document.createElement('div');
+      d.className = 'act-cell act-' + pick();
+      grid.appendChild(d);
+    }
+  })();
+</script>
+</body>
+</html>
